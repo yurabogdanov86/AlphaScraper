@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # -----------------------------------
-# Конфигурация логирования
+# 🔹 Конфигурация логирования
 # -----------------------------------
 logging.basicConfig(
     filename='scraper.log',
@@ -24,7 +24,7 @@ console_handler.setFormatter(formatter)
 logging.getLogger().addHandler(console_handler)
 
 # -----------------------------------
-# Конфигурация Telegram бота
+# 🔹 Конфигурация Telegram бота
 # (читаем из переменных окружения)
 # -----------------------------------
 TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -35,7 +35,7 @@ FILE_PATH = "previous_value.txt"  # Файл для хранения преды�
 def send_telegram_message(text):
     """Функция отправки сообщения в Telegram"""
     if not TOKEN or not CHANNEL_ID:
-        logging.error("❌ Не удалось найти TELEGRAM_TOKEN или TELEGRAM_CHANNEL_ID в переменных окружения.")
+        logging.error("❌ Ошибка: TELEGRAM_TOKEN или TELEGRAM_CHANNEL_ID не найдены в переменных окружения.")
         return
 
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -64,15 +64,16 @@ def write_new_value(value):
         file.write(value)
 
 def main():
+    """Основная функция выполнения парсинга"""
     options = webdriver.ChromeOptions()
     options.add_argument("--start-maximized")
     options.add_argument("--disable-gpu")
-    options.headless = False
+    options.headless = True  # Без GUI, полезно для GitHub Actions
     
     driver = webdriver.Chrome(options=options)
 
     try:
-        url = "https://alfabank.ru/make-money/investments/help/trebuemoeobespechenie/"  # <-- Путь проверите сами
+        url = "https://alfabank.ru/make-money/investments/help/trebuemoe-obespechenie/"
         logging.info("Открываем страницу: %s", url)
         driver.get(url)
         
@@ -113,14 +114,14 @@ def main():
             previous_risk_rate = read_previous_value()
 
             if previous_risk_rate is None or current_risk_rate != previous_risk_rate:
-                message = f\"\"\"🔹 *Обновление ставки риска!* 🚨
+                message = f"""🔹 *Обновление ставки риска!* 🚨
 1. {extracted_data[0]}
 2. *ISIN:* {extracted_data[1]}
 3. *Валюта риска:* {extracted_data[2]}
-4. *Ставка риска (длинные позиции, текущая):* {current_risk_rate} (было: {previous_risk_rate if previous_risk_rate else \"нет данных\"})
+4. *Ставка риска (длинные позиции, текущая):* {current_risk_rate} (было: {previous_risk_rate if previous_risk_rate else "нет данных"})
 5. *Ставка риска (длинные позиции, начальная):* {extracted_data[4]}
 6. *Ставка риска (короткие позиции, начальная):* {extracted_data[5]}
-\"\"\"
+"""
                 send_telegram_message(message)
                 write_new_value(current_risk_rate)  # Сохраняем новое значение
             else:
@@ -134,5 +135,5 @@ def main():
         driver.quit()
         logging.info("Закрываем браузер и завершаем работу.")
 
-if __name__ == \"__main__\":
+if __name__ == "__main__":
     main()
