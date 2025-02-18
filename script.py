@@ -66,10 +66,14 @@ def write_new_value(value):
 def main():
     """Основная функция выполнения парсинга"""
     options = webdriver.ChromeOptions()
-    options.add_argument("--start-maximized")
-    options.add_argument("--disable-gpu")
-    options.headless = True  # Без GUI, полезно для GitHub Actions
-    
+    options.add_argument("--headless")  # Запуск без GUI
+    options.add_argument("--no-sandbox")  # Отключает sandbox, важно для CI/CD
+    options.add_argument("--disable-dev-shm-usage")  # Использует tmpfs вместо /dev/shm
+    options.add_argument("--disable-gpu")  # Отключает GPU-ускорение (не нужно для headless)
+    options.add_argument("--remote-debugging-port=9222")  # Открывает порт отладки
+    options.add_argument("--user-data-dir=/tmp/chrome-user-data")  # Уникальная папка профиля
+    options.add_argument("--disable-blink-features=AutomationControlled")  # Скрывает использование автоматизации
+
     driver = webdriver.Chrome(options=options)
 
     try:
