@@ -4,7 +4,7 @@ name: Automated Scraper Run
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"  # Запуск каждый час
+    - cron: "*/10 * * * *"  # Запуск каждые 10 минут
 
 permissions:
   contents: write  # Разрешает workflow коммитить файлы в репозиторий
