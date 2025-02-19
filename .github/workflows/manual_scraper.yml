@@ -1,8 +1,10 @@
-name: Manual Scraper Run
+name: Automated Scraper Run
 
-# Разрешаем workflow запускаться вручную через GitHub Actions
+# Запускаем workflow вручную или автоматически каждый час
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"  # Запуск каждый час
 
 permissions:
   contents: write  # Разрешает workflow коммитить файлы в репозиторий
