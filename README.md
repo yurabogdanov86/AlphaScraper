@@ -1,156 +1,245 @@
-**Цель и план**
 
-### **Цель**
-Этот документ поможет вам настроить GitHub Actions для автоматизацию запуска Python-скриптов. Мы создадим новый репозиторий, добавим рабочий процесс (workflow) и настроим его для ручного запуска.
+# Инструкция по настройке автоматизации с помощью GitHub Actions
 
-### **План**
-1. Создать новый репозиторий на GitHub.
-2. Заполнить информацию о репозитории и выбрать параметры видимости.
-3. Добавить основной скрипт (`script.py`) в репозиторий.
-4. Создать файл зависимостей `requirements.txt`.
-5. Создать и настроить GitHub Actions workflow.
-6. Добавить секреты (API-ключи) и запустить workflow вручную.
-7. Проверить успешное выполнение workflow и отладить возможные ошибки.
+Эта инструкция поможет вам настроить автоматизацию с помощью **GitHub Actions**, чтобы выполнять задачу парсинга и отправки уведомлений в Telegram. В процессе будут использоваться **Selenium** для автоматизированного сбора данных, **Telegram-бот** для уведомлений, и **GitHub Actions** для автоматизации процесса.
 
 ---
 
-## **Шаг 1: Создание нового репозитория на GitHub**
-
-1. Откройте [GitHub](https://github.com/) и войдите в свой аккаунт.
-2. В верхнем правом углу нажмите на значок **“+”**.
-3. В выпадающем меню выберите **“New repository”**.
-
----
-
-## **Шаг 2: Заполнение информации о репозитории**
-
-1. **Owner (Владелец)** – Убедитесь, что выбран ваш аккаунт.
-2. **Repository name (Имя репозитория)** – Введите уникальное имя для вашего проекта.
-3. **Description (Описание, необязательно)** – Укажите краткое описание проекта, например: "Этот репозиторий содержит код для автоматизированного сбора данных и отправки уведомлений в Telegram."
-4. **Выберите видимость репозитория:**
-   - **Public** – репозиторий будет доступен всем в интернете.
-   - **Private** – только вы и приглашённые пользователи смогут видеть репозиторий.
-5. **Инициализация репозитория (опционально):**
-   - **Add a README file** – добавит файл `README.md`, в котором можно написать описание проекта.
-   - **Add .gitignore** – выберите шаблон, если хотите игнорировать определённые файлы (например, для Python можно выбрать `Python`).
+### **Шаг 1: Создание репозитория на GitHub**
+1. Откройте **GitHub** и войдите в свой аккаунт.
+2. Нажмите на значок **“+”** в верхнем правом углу и выберите **New repository**.
+3. Укажите **имя** репозитория (например, `AlphaScraper`), выберите видимость (Public или Private) и нажмите **Create repository**.
 
 ---
 
-## **Шаг 3: Добавление основного скрипта (`script.py`) и файла зависимостей (`requirements.txt`) с отладкой**
+### **Шаг 2: Настройка проекта**
+1. В вашем репозитории создайте следующие файлы:
+   - `script.py` — основной Python-скрипт для парсинга и отправки данных в Telegram.
+   - `requirements.txt` — файл, содержащий список зависимостей, необходимых для работы скрипта.
 
-1. Перейдите в ваш репозиторий на GitHub.
-2. Нажмите на вкладку **Code**.
-3. Нажмите на значок **`+`** справа от вкладки **Code**, затем выберите **Create new file**.
-4. В поле имени файла введите `script.py`.
-5. **Добавьте следующий код с отладкой:**
-   ```python
-   import os
-   import requests
+2. Пример содержимого `script.py`:
 
-   def send_message():
-       # Получаем секреты из переменных окружения
-       token = os.getenv('TELEGRAM_TOKEN')  # Получаем Telegram токен
-       chat_id = os.getenv('TELEGRAM_CHANNEL_ID')  # Получаем ID канала
+```python
+import logging
+import time
+import requests
+import os
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-       # Отладка: выводим секреты, чтобы убедиться, что они правильно загружаются
-       print(f"Token: {token}")  # Это только для отладки
-       print(f"Chat ID: {chat_id}")  # Это только для отладки
-       
-       if not token or not chat_id:
-           print("Ошибка! Токен или ID канала не были найдены.")
-           return
+# -----------------------------------
+# Конфигурация логирования
+# -----------------------------------
+logging.basicConfig(
+    filename='scraper.log',
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+console_handler.setFormatter(formatter)
+logging.getLogger().addHandler(console_handler)
 
-       message = "Привет! Этот скрипт отправлен через GitHub Actions."
+# -----------------------------------
+# Конфигурация Telegram бота
+# -----------------------------------
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 
-       # Формируем URL для Telegram API
-       url = f"https://api.telegram.org/bot{token}/sendMessage"
-       
-       # Формируем данные запроса
-       data = {"chat_id": chat_id, "text": message}
-       
-       # Отправляем запрос в Telegram
-       response = requests.post(url, data=data)
-       
-       # Печатаем результат отправки сообщения
-       if response.status_code == 200:
-           print("Сообщение успешно отправлено!")
-       else:
-           print(f"Ошибка отправки сообщения: {response.status_code}, {response.text}")
+FILE_PATH = "previous_value.txt"  # Файл для хранения предыдущего значения
 
-   if __name__ == "__main__":
-       send_message()
-   ```
-6. Нажмите **Commit new file**, чтобы сохранить файл в репозитории.
+def send_telegram_message(text):
+    if not TOKEN or not CHANNEL_ID:
+        logging.error("Ошибка: TELEGRAM_TOKEN или TELEGRAM_CHANNEL_ID не найдены в переменных окружения.")
+        return
 
-7. Теперь создайте файл `requirements.txt`, который содержит список зависимостей для скрипта:
-   - В поле имени файла введите `requirements.txt`.
-   - Вставьте список необходимых библиотек, например:
-     ```txt
-     requests
-     ```
-   - Нажмите **Commit new file**, чтобы сохранить файл.
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    data = {
+        "chat_id": CHANNEL_ID,
+        "text": text,
+        "parse_mode": "Markdown"
+    }
+
+    response = requests.post(url, data=data)
+    if response.status_code == 200:
+        logging.info("Сообщение успешно отправлено в Telegram!")
+    else:
+        logging.error(f"Ошибка отправки! Код ответа: {response.status_code}, Текст: {response.text}")
+
+def read_previous_value():
+    if os.path.exists(FILE_PATH):
+        with open(FILE_PATH, "r", encoding="utf-8") as file:
+            return file.read().strip()
+    return None
+
+def write_new_value(value):
+    with open(FILE_PATH, "w", encoding="utf-8") as file:
+        file.write(value)
+
+def main():
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Запуск без GUI
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--user-data-dir=/tmp/chrome-user-data")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+
+    driver = webdriver.Chrome(options=options)
+
+    try:
+        url = "https://alfabank.ru/make-money/investments/help/trebuemoe-obespechenie/"
+        logging.info("Открываем страницу: %s", url)
+        driver.get(url)
+        
+        WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        logging.info("Страница загружена.")
+
+        for _ in range(3):
+            driver.execute_script("window.scrollBy(0, 200);")
+            time.sleep(1)
+        logging.info("Прокрутили страницу вниз.")
+
+        try:
+            fund_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//span[contains(text(), 'Фонды')]"))
+            )
+            ActionChains(driver).move_to_element(fund_button).perform()
+            time.sleep(1)
+            fund_button.click()
+            logging.info("Кнопка 'Фонды' нажата!")
+        except Exception as e:
+            logging.error(f"Не удалось нажать кнопку 'Фонды': {e}")
+            return
+        
+        logging.info("Ждем 5 секунд...")
+        time.sleep(5)
+
+        xpath_expr = "//p[@data-test-id='text' and contains(@class, '_8QWkTE')]"
+        data_elements = driver.find_elements(By.XPATH, xpath_expr)
+
+        extracted_data = [el.text.strip() for el in data_elements if el.text.strip()]
+        
+        logging.info("Найдено %d элементов.", len(extracted_data))
+
+        if len(extracted_data) >= 6:
+            current_risk_rate = extracted_data[3]
+            previous_risk_rate = read_previous_value()
+
+            if previous_risk_rate is None or current_risk_rate != previous_risk_rate:
+                message = f"Обновление ставки риска! 
+1. {extracted_data[0]} 
+2. ISIN: {extracted_data[1]} 
+3. Валюта: {extracted_data[2]} 
+4. Ставка риска: {current_risk_rate} (до: {previous_risk_rate if previous_risk_rate else 'нет данных'})"
+                send_telegram_message(message)
+                write_new_value(current_risk_rate)
+            else:
+                logging.info("Ставка не изменилась.")
+        else:
+            logging.warning("Недостаточно данных.")
+
+    finally:
+        driver.quit()
+        logging.info("Завершаем работу.")
+
+if __name__ == "__main__":
+    main()
+```
+
+3. Пример содержимого `requirements.txt`:
+```
+requests
+selenium
+chromedriver-autoinstaller
+```
 
 ---
 
-## **Шаг 4: Настройка GitHub Actions**
+### **Шаг 3: Настройка GitHub Actions для автоматизации**
+1. В репозитории создайте папку `.github/workflows` и создайте файл `manual_scraper.yml`.
+2. Пример содержимого `manual_scraper.yml`:
 
-1. **Создайте папку для workflows**:
-   - Перейдите в ваш репозиторий на GitHub.
-   - Нажмите на вкладку **Code**.
-   - Нажмите на значок **`+`** справа от вкладки **Code**, затем выберите **Create new file**.
-   - В поле имени файла введите `.github/workflows/manual_scraper.yml`.
-   - GitHub автоматически создаст необходимые папки, если их ещё нет.
+```yaml
+name: Automated Scraper Run
 
-2. **Создайте файл workflow**:
-   ```yaml
-   name: Manual Scraper Run
-   on:
-     workflow_dispatch:
-   jobs:
-     run-scraper:
-       runs-on: ubuntu-latest
-       steps:
-         - name: Checkout repository
-           uses: actions/checkout@v3
-         - name: Set up Python
-           uses: actions/setup-python@v4
-           with:
-             python-version: 3.9
-         - name: Install dependencies
-           run: |
-             python -m pip install --upgrade pip
-             pip install -r requirements.txt
-         - name: Run scraper script
-           run: python script.py
-           env:
-             TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-             TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
-   ```
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"  # Запуск каждый час
+
+permissions:
+  contents: write  # Разрешает workflow коммитить файлы в репозиторий
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest  # Запуск на сервере Ubuntu
+    steps:
+      # 1️⃣ Клонируем репозиторий
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true
+
+      # 2️⃣ Устанавливаем Chrome (если его нет)
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      # 3️⃣ Устанавливаем Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      # 4️⃣ Устанавливаем зависимости
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 5️⃣ Запускаем скрипт
+      - name: Run scraper script
+        run: python script.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+
+      # 6️⃣ Коммитим изменения в previous_value.txt (если файл изменился)
+      - name: Commit changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes detected. Skipping commit."
+          else
+            echo "Changes detected. Committing..."
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git add previous_value.txt
+            git commit -m "Update previous_value.txt"
+            git push
+          fi
+```
 
 ---
 
-## **Шаг 5: Добавление секретов (API-ключей)**
-
-1. Перейдите в **Settings** → **Secrets and variables** → **Actions**.
-2. Нажмите **New repository secret** и создайте **первый секрет**:
-   - **Name (Имя):** `TELEGRAM_TOKEN`
-   - **Secret (Значение):** `Ваш_Telegram_Токен`
-   - Нажмите **Add secret**.
-3. Нажмите **New repository secret** снова и создайте **второй секрет**:
-   - **Name (Имя):** `TELEGRAM_CHANNEL_ID`
-   - **Secret (Значение):** `Ваш_ID_Канала`
-   - Нажмите **Add secret**.
+### **Шаг 4: Настройка переменных окружения (Secrets)**
+1. В **GitHub** перейдите в настройки репозитория.
+2. В разделе **Settings → Secrets and variables → Actions** добавьте:
+   - `TELEGRAM_TOKEN` (значение: ваш токен Telegram-бота)
+   - `TELEGRAM_CHANNEL_ID` (значение: ID вашего канала или чата)
 
 ---
 
-## **Шаг 6: Запуск workflow вручную**
-
-1. Перейдите во вкладку **Actions** в репозитории.
-2. Выберите workflow **Manual Scraper Run**.
-3. Нажмите **Run workflow** и дождитесь выполнения.
-4. Перейдите в запущенный workflow и откройте вкладку **Logs**, чтобы проверить выполнение каждого шага.
+### **Шаг 5: Запуск и мониторинг**
+1. Запустите workflow вручную через вкладку **Actions**.
+2. Через **cron** workflow будет запускаться **каждый час**.
 
 ---
 
-Теперь ваш репозиторий полностью настроен для автоматического запуска скрипта через GitHub Actions! 🚀
-
+Теперь ваш проект полностью автоматизирован и будет работать **24/7**! 💪🚀
